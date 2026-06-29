@@ -48,7 +48,7 @@ export async function saveParseResult(
 	if (result.images.length > 0) {
 		await ensureFolder(app, attachFolder);
 
-		// Write each image to a unique path, collecting old -> new mapping.
+		// Write each image to a unique path, collecting old ref -> new file name.
 		const linkMap = new Map<string, string>();
 		for (let i = 0; i < result.images.length; i++) {
 			const img = result.images[i];
@@ -60,7 +60,9 @@ export async function saveParseResult(
 			});
 			const targetPath = uniquePath(app, attachFolder, desiredName);
 			await app.vault.createBinary(targetPath, img.data);
-			linkMap.set(img.originalRef, targetPath);
+			// Map to the final file name; we rewrite links as Obsidian wikilinks,
+			// which resolve by name regardless of note/attachment folder layout.
+			linkMap.set(img.originalRef, targetPath.split("/").pop() as string);
 		}
 
 		markdown = rewriteImageLinks(markdown, linkMap);
@@ -102,22 +104,29 @@ function buildAttachmentName(
 
 /**
  * Replace image references in markdown. MinerU emits `![alt](images/x.jpg)`.
- * We map each known originalRef to the new vault path (URL-encoded for markdown).
+ * We rewrite the whole image expression to an Obsidian wikilink `![[fileName]]`,
+ * which resolves by file name regardless of the note/attachment folder layout.
+ * `linkMap` maps the original ref (e.g. "images/x.jpg") to the new file name.
  */
 function rewriteImageLinks(
 	markdown: string,
 	linkMap: Map<string, string>
 ): string {
 	let out = markdown;
-	for (const [oldRef, newPath] of linkMap) {
-		const encoded = newPath
-			.split("/")
-			.map((seg) => encodeURIComponent(seg))
-			.join("/");
-		// Replace the exact ref wherever it appears inside (...) of a markdown image/link.
-		out = out.split(oldRef).join(encoded);
+	for (const [oldRef, newName] of linkMap) {
+		// Match a markdown image whose target is exactly oldRef: ![any](oldRef)
+		const pattern = new RegExp(
+			"!\\[[^\\]]*\\]\\(\\s*" + escapeRegExp(oldRef) + "\\s*\\)",
+			"g"
+		);
+		out = out.replace(pattern, `![[${newName}]]`);
 	}
 	return out;
+}
+
+/** Escape a string for safe use inside a RegExp. */
+function escapeRegExp(s: string): string {
+	return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /** Convenience: report success/failure via Notice. */

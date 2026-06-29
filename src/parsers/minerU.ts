@@ -224,7 +224,8 @@ export class MinerUParser implements Parser {
 		}
 		const markdown = new TextDecoder().decode(files[mdName]);
 
-		// Collect images (any file under images/ or with an image extension).
+		// Collect images that are actually referenced in the markdown.
+		// (MinerU zips can contain extra/orphan images not used in full.md.)
 		const images: ParsedImage[] = [];
 		const mdDir = mdName.includes("/")
 			? mdName.slice(0, mdName.lastIndexOf("/") + 1)
@@ -234,6 +235,7 @@ export class MinerUParser implements Parser {
 			if (!/\.(png|jpe?g|gif|webp|bmp|jp2)$/i.test(name)) continue;
 			// Reference as it likely appears in markdown: path relative to the md file.
 			const ref = mdDir && name.startsWith(mdDir) ? name.slice(mdDir.length) : name;
+			if (!markdown.includes(ref)) continue; // skip orphan images
 			images.push({
 				originalRef: ref,
 				data: content.buffer.slice(
