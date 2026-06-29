@@ -57,6 +57,9 @@ export class SetupGuideModal extends Modal {
 		ol.createEl("li", {
 			text: "markitdown：先 pip install 'markitdown[all]'，再在设置里切换后端。",
 		});
+		ol.createEl("li", {
+			text: "视觉 LLM OCR（识别图片文字）：在设置中填 API 地址 / Key / 视觉模型，点「测试识图」通过后即可右键图片解析。支持 OpenAI 兼容中转站。",
+		});
 	}
 
 	private renderDetailed(el: HTMLElement): void {
@@ -83,6 +86,18 @@ export class SetupGuideModal extends Modal {
 			text: "需要本地已安装 Python；命令默认 markitdown，可在设置中改为完整路径。",
 		});
 		k.createEl("li", { text: "仅桌面端可用；不提取图片附件。" });
+
+		el.createEl("h4", { text: "视觉 LLM OCR（识图 / vision）" });
+		const v = el.createEl("ul");
+		v.createEl("li", {
+			text: "用 OpenAI 兼容接口的视觉模型识别图片中的文字并转为 Markdown，仅支持图片（png/jpg/jpeg/webp/gif/bmp）。",
+		});
+		v.createEl("li", {
+			text: "配置：API 地址（如 https://api.openai.com/v1 或中转站地址）、API Key、模型（须支持图片输入，如 gpt-4o / gpt-4o-mini / qwen-vl-max）。",
+		});
+		v.createEl("li", {
+			text: "兼容第三方 OpenAI 兼容服务（new-api / one-api 等中转站）。配置后用「测试识图」按钮或「测试视觉 OCR」命令验证。",
+		});
 
 		el.createEl("h4", { text: "保存位置 / Save location" });
 		const s = el.createEl("ul");

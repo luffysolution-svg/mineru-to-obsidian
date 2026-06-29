@@ -29,7 +29,10 @@ export interface Parser {
 	parse(file: TFile, settings: PluginSettings): Promise<ParseResult>;
 }
 
-export type ParserId = "mineru" | "markitdown";
+export type ParserId = "mineru" | "markitdown" | "vision";
+
+/** Image extensions handled by the vision-OCR backend. */
+export const VISION_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "gif", "bmp"];
 
 /** File extensions the plugin offers to parse. */
 export const SUPPORTED_EXTENSIONS = [

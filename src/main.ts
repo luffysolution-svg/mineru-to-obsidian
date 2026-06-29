@@ -7,10 +7,12 @@ import {
 import { Parser, ParserId, SUPPORTED_EXTENSIONS } from "./parsers/types";
 import { MinerUParser } from "./parsers/minerU";
 import { MarkitdownParser } from "./parsers/markitdown";
+import { VisionOcrParser } from "./parsers/visionOcr";
 import { notifyError, notifySuccess, saveParseResult } from "./core/saver";
 import { runDiagnostics } from "./commands/diagnostics";
 import { SetupGuideModal } from "./commands/setupGuide";
 import { ApiConfigModal } from "./ui/apiConfigModal";
+import { testVision } from "./parsers/visionOcr";
 
 export default class MinerUPlugin extends Plugin {
 	settings!: PluginSettings;
@@ -18,6 +20,7 @@ export default class MinerUPlugin extends Plugin {
 	private parsers: Record<ParserId, Parser> = {
 		mineru: new MinerUParser(),
 		markitdown: new MarkitdownParser(),
+		vision: new VisionOcrParser(),
 	};
 
 	async onload(): Promise<void> {
@@ -52,6 +55,16 @@ export default class MinerUPlugin extends Plugin {
 			id: "configure-api",
 			name: "配置 MinerU API / Configure MinerU API",
 			callback: () => new ApiConfigModal(this).open(),
+		});
+		this.addCommand({
+			id: "test-vision-ocr",
+			name: "测试视觉 OCR / Test vision OCR",
+			callback: async () => {
+				const notice = new Notice("测试识图中 / Testing vision...", 0);
+				const r = await testVision(this.settings);
+				notice.hide();
+				new Notice((r.ok ? "✓ " : "❌ ") + r.detail, r.ok ? 6000 : 10000);
+			},
 		});
 
 		this.addSettingTab(new MinerUSettingTab(this.app, this));

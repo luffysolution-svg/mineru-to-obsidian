@@ -3,6 +3,7 @@ import type MinerUPlugin from "./main";
 import type { ParserId } from "./parsers/types";
 import { SetupGuideModal } from "./commands/setupGuide";
 import { runDiagnostics } from "./commands/diagnostics";
+import { testVision, fetchModels } from "./parsers/visionOcr";
 
 /** MinerU token management page — where users obtain an API token. */
 export const MINERU_TOKEN_URL = "https://mineru.net/apiManage/token";
@@ -29,6 +30,17 @@ export interface PluginSettings {
 	/** markitdown CLI command (default "markitdown"). */
 	markitdownCommand: string;
 
+	/** Vision-LLM OCR: OpenAI-compatible base URL (e.g. https://api.openai.com/v1). */
+	visionBaseUrl: string;
+	/** Vision-LLM OCR: API key. */
+	visionApiKey: string;
+	/** Vision-LLM OCR: model name (must support image input, e.g. gpt-4o). */
+	visionModel: string;
+	/** Vision-LLM OCR: cached model IDs fetched from /models (for the dropdown). */
+	visionModels: string[];
+	/** Vision-LLM OCR: prompt sent alongside the image. */
+	visionPrompt: string;
+
 	/** Folder for the generated markdown note. Supports {filename} {date}. */
 	markdownSavePath: string;
 	/** Folder for extracted image attachments. Supports {filename} {date} {noteName}. */
@@ -49,6 +61,12 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	minerUEnableTable: true,
 	minerULanguage: "ch",
 	markitdownCommand: "markitdown",
+	visionBaseUrl: "https://api.openai.com/v1",
+	visionApiKey: "",
+	visionModel: "gpt-4o-mini",
+	visionModels: [],
+	visionPrompt:
+		"请将这张图片的内容完整转写为 Markdown，保留标题、列表、表格与公式结构，只输出 Markdown 正文，不要添加任何解释或代码块包裹。",
 	markdownSavePath: "MinerU/{filename}",
 	attachmentSavePath: "MinerU/{filename}/images",
 	attachmentRename: "note-index",
@@ -75,6 +93,7 @@ export class MinerUSettingTab extends PluginSettingTab {
 				dd
 					.addOption("mineru", "MinerU (云端 / cloud)")
 					.addOption("markitdown", "markitdown (本地 CLI / local)")
+					.addOption("vision", "视觉 LLM OCR (识图 / vision)")
 					.setValue(this.plugin.settings.parser)
 					.onChange(async (v) => {
 						this.plugin.settings.parser = v as ParserId;
@@ -85,8 +104,10 @@ export class MinerUSettingTab extends PluginSettingTab {
 
 		if (this.plugin.settings.parser === "mineru") {
 			this.displayMinerUSettings(containerEl);
-		} else {
+		} else if (this.plugin.settings.parser === "markitdown") {
 			this.displayMarkitdownSettings(containerEl);
+		} else {
+			this.displayVisionSettings(containerEl);
 		}
 
 		this.displaySaveSettings(containerEl);
@@ -195,6 +216,148 @@ export class MinerUSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+	}
+
+	private displayVisionSettings(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("视觉 LLM OCR").setHeading();
+
+		const desc = document.createDocumentFragment();
+		desc.append(
+			"使用 OpenAI 兼容接口（OpenAI、new-api / one-api 中转站等）的视觉模型识别图片内容并转为 Markdown。",
+			createEl("br"),
+			"仅支持图片文件（png/jpg/jpeg/webp/gif/bmp）。模型必须支持图片输入。"
+		);
+		new Setting(containerEl).setDesc(desc);
+
+		new Setting(containerEl)
+			.setName("API 地址 / Base URL")
+			.setDesc("OpenAI 兼容地址，通常以 /v1 结尾。例如 https://api.openai.com/v1 或中转站地址。")
+			.addText((text) =>
+				text
+					.setPlaceholder("https://api.openai.com/v1")
+					.setValue(this.plugin.settings.visionBaseUrl)
+					.onChange(async (v) => {
+						this.plugin.settings.visionBaseUrl = v.trim();
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("API Key")
+			.setDesc("用于鉴权的密钥（中转站的 key 同样填这里）。")
+			.addText((text) => {
+				text.inputEl.type = "password";
+				text
+					.setPlaceholder("sk-...")
+					.setValue(this.plugin.settings.visionApiKey)
+					.onChange(async (v) => {
+						this.plugin.settings.visionApiKey = v.trim();
+						await this.plugin.saveSettings();
+					});
+			});
+
+		// Model: free-text entry, plus a "fetch list" button that turns the
+		// field into a dropdown once models are retrieved from /models.
+		const models = this.plugin.settings.visionModels;
+		const modelSetting = new Setting(containerEl)
+			.setName("模型 / Model")
+			.setDesc("需支持图片输入，如 gpt-4o、gpt-4o-mini、qwen-vl-max。可点右侧按钮通过 Key 拉取模型列表。");
+
+		if (models.length > 0) {
+			modelSetting.addDropdown((dd) => {
+				for (const m of models) dd.addOption(m, m);
+				// Ensure the current value is selectable even if not in the list.
+				if (!models.includes(this.plugin.settings.visionModel)) {
+					dd.addOption(
+						this.plugin.settings.visionModel,
+						this.plugin.settings.visionModel + "（自定义 / custom）"
+					);
+				}
+				dd.setValue(this.plugin.settings.visionModel).onChange(async (v) => {
+					this.plugin.settings.visionModel = v;
+					await this.plugin.saveSettings();
+				});
+			});
+		} else {
+			modelSetting.addText((text) =>
+				text
+					.setPlaceholder("gpt-4o-mini")
+					.setValue(this.plugin.settings.visionModel)
+					.onChange(async (v) => {
+						this.plugin.settings.visionModel = v.trim();
+						await this.plugin.saveSettings();
+					})
+			);
+		}
+
+		modelSetting.addButton((btn) =>
+			btn
+				.setButtonText("获取模型 / Fetch")
+				.setTooltip("通过 API Key 拉取可用模型列表 / fetch model list")
+				.onClick(async () => {
+					btn.setDisabled(true);
+					btn.setButtonText("获取中... / Fetching");
+					try {
+						const list = await fetchModels(
+							this.plugin.settings.visionBaseUrl,
+							this.plugin.settings.visionApiKey
+						);
+						this.plugin.settings.visionModels = list;
+						await this.plugin.saveSettings();
+						new Notice(`获取到 ${list.length} 个模型 / ${list.length} models`);
+						this.display();
+					} catch (e) {
+						new Notice(
+							"获取失败 / failed: " +
+								(e instanceof Error ? e.message : String(e)),
+							8000
+						);
+						btn.setDisabled(false);
+						btn.setButtonText("获取模型 / Fetch");
+					}
+				})
+		);
+
+		new Setting(containerEl)
+			.setName("提示词 / Prompt")
+			.setDesc("发送给模型的指令，决定输出风格。")
+			.addTextArea((ta) => {
+				ta.inputEl.rows = 3;
+				ta.inputEl.style.width = "100%";
+				ta
+					.setValue(this.plugin.settings.visionPrompt)
+					.onChange(async (v) => {
+						this.plugin.settings.visionPrompt = v;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		// Test button + result line.
+		const resultEl = createEl("div", {
+			cls: "setting-item-description",
+			text: "",
+		});
+		new Setting(containerEl)
+			.setName("测试识图 / Test vision")
+			.setDesc("发送一张含已知数字的测试图，验证连接、鉴权与识图能力。")
+			.addButton((btn) =>
+				btn
+					.setButtonText("测试 / Test")
+					.setCta()
+					.onClick(async () => {
+						btn.setDisabled(true);
+						btn.setButtonText("测试中 / Testing...");
+						resultEl.setText("");
+						const r = await testVision(this.plugin.settings);
+						resultEl.setText((r.ok ? "✓ " : "✗ ") + r.detail);
+						resultEl.style.color = r.ok
+							? "var(--text-success)"
+							: "var(--text-error)";
+						btn.setDisabled(false);
+						btn.setButtonText("测试 / Test");
+					})
+			);
+		containerEl.appendChild(resultEl);
 	}
 
 	private displaySaveSettings(containerEl: HTMLElement): void {

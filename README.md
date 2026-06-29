@@ -8,13 +8,14 @@
 ## 功能 / Features
 
 - 在文件浏览器中右键文档，选择 **解析文档 / Parse document**。
-- 两个解析后端：
+- 三个解析后端：
   - **MinerU**（云端）— 免费模式（无需 Token）或 Precision API（带 Token，支持提取图片附件）。
   - **markitdown**（本地）— 调用本地 Python CLI，仅桌面端，不提取图片。
+  - **视觉 LLM OCR**（识图）— 用 OpenAI 兼容接口的视觉模型识别**图片**中的文字并转为 Markdown，兼容第三方中转站（new-api / one-api 等）。
 - 自定义 Markdown 与附件保存路径，支持变量 `{filename}` `{date}` `{noteName}`。
 - 附件重命名：保留原名 / `{noteName}-{序号}` / `{date}-{序号}` / 自定义模板。
 - 成功 / 失败 Notice 提示。
-- 命令：**检测配置**、**安装与配置引导**、**配置 MinerU API**。
+- 命令：**检测配置**、**安装与配置引导**、**配置 MinerU API**、**测试视觉 OCR**。
 
 支持的文件类型 / Supported: `pdf, doc, docx, ppt, pptx, xls, xlsx, png, jpg, jpeg, jp2, webp, gif, bmp, html`。
 
@@ -74,6 +75,21 @@ pip install 'markitdown[all]'
 - 需要本地已安装 Python；不提取图片附件。
 - 仓库：<https://github.com/microsoft/markitdown>
 
+### 视觉 LLM OCR / Vision OCR
+
+用 OpenAI 兼容接口的视觉模型识别**图片**中的文字并转为 Markdown。markitdown 的 CLI 无法驱动 LLM，因此这是插件内独立实现的后端（直接调用 `/chat/completions`），天然兼容各类 OpenAI 兼容服务与中转站。
+
+| 配置项 | 说明 |
+|--------|------|
+| API 地址 / Base URL | 如 `https://api.openai.com/v1` 或中转站地址 |
+| API Key | 鉴权密钥（中转站 key 同样填这里） |
+| 模型 / Model | 须支持图片输入，如 `gpt-4o`、`gpt-4o-mini`、`qwen-vl-max` |
+| 提示词 / Prompt | 发送给模型的指令，决定输出风格 |
+
+- **获取模型 / Fetch**：通过 API Key 调用 `/models` 拉取可用模型列表，拉取后模型项变为下拉选择。
+- **测试识图 / Test**：发送一张含已知数字的测试图，验证连接、鉴权与**识图能力**（连得上但模型不支持图片会明确提示）。也可用命令 **测试视觉 OCR**。
+- 仅支持图片：`png / jpg / jpeg / webp / gif / bmp`。其他文档请用 MinerU 或 markitdown。
+
 ### 保存路径 / Save paths
 
 - **Markdown 文件夹** 与 **附件文件夹** 均支持变量 `{filename}`（原文件名）、`{date}`（YYYY-MM-DD）、`{noteName}`。
@@ -86,6 +102,7 @@ pip install 'markitdown[all]'
 - **检测配置 / Check configuration** — 校验 Token、免费模式、markitdown CLI 与保存路径。
 - **安装与配置引导 / Setup & configuration guide** — 简约 / 详细说明与官网链接。
 - **配置 MinerU API / Configure MinerU API** — 快速填写 Token。
+- **测试视觉 OCR / Test vision OCR** — 验证视觉模型的连接、鉴权与识图能力。
 
 ---
 
@@ -94,9 +111,12 @@ pip install 'markitdown[all]'
 **markitdown 解析 PDF 出现满屏 `(cid:NN)`？**
 该 PDF 使用了自定义编码且无 ToUnicode 映射的嵌入字体，markitdown（基于 pdfminer，无 OCR）无法解码。插件会检测到此情况并报错提示。**请改用 MinerU 后端**（设置 → 解析后端 → MinerU），它具备 OCR 与版面分析能力。
 
+**markitdown 中文显示为 `���`（乱码）？** 已在 v0.1.2 修复：插件强制 Python 以 UTF-8 输出（`PYTHONUTF8`），解决中文 Windows 下控制台编码导致的乱码。请更新到最新版本。
+
 **后端如何选择？**
 - **MinerU**：扫描件、复杂版面、需要图片/公式/表格、CID 编码 PDF → 首选。
 - **markitdown**：Office 文档（docx/pptx/xlsx）、文本规整的 PDF、离线快速转换。
+- **视觉 LLM OCR**：单张图片/截图的文字识别，或想用自己的（中转）大模型转写图片时。
 
 **插件不显示？** 安装/更新后需在 Obsidian 中重载（`Ctrl+P` → "Reload app without saving"），并确认未开启「受限模式」。
 

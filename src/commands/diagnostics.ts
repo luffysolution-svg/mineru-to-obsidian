@@ -46,6 +46,19 @@ export async function runDiagnostics(plugin: MinerUPlugin): Promise<void> {
 			: "markitdown：未检测到 / not found（pip install 'markitdown[all]'）",
 	});
 
+	// Vision LLM OCR.
+	if (s.visionApiKey.trim() && s.visionBaseUrl.trim() && s.visionModel.trim()) {
+		lines.push({
+			ok: s.parser === "vision" ? "warn" : true,
+			label: `视觉 OCR：已配置 / configured（${s.visionModel.trim()}，用"测试视觉 OCR"命令验证识图）`,
+		});
+	} else {
+		lines.push({
+			ok: s.parser === "vision" ? false : "warn",
+			label: "视觉 OCR：未配置完整（需 API 地址 / Key / 模型）/ not fully configured",
+		});
+	}
+
 	// Save paths.
 	lines.push({
 		ok: s.markdownSavePath ? true : false,
