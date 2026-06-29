@@ -58,7 +58,14 @@ function runMarkitdown(command: string, filePath: string): Promise<string> {
 		execFile(
 			command,
 			[filePath],
-			{ maxBuffer: 64 * 1024 * 1024, windowsHide: true },
+			{
+				maxBuffer: 64 * 1024 * 1024,
+				windowsHide: true,
+				// Force Python to emit UTF-8 on stdout. Without this, Python on a
+				// Chinese Windows console writes GBK (cp936) bytes, which Node then
+				// mis-decodes as UTF-8 — turning CJK text into `���` replacement chars.
+				env: { ...process.env, PYTHONUTF8: "1", PYTHONIOENCODING: "utf-8" },
+			},
 			(err, stdout, stderr) => {
 				if (err) {
 					const hint =

@@ -1,7 +1,7 @@
 {
   "id": "mineru-to-obsidian",
   "name": "MinerU to Obsidian",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "minAppVersion": "1.4.0",
   "description": "Right-click a document to parse it into Markdown with MinerU or markitdown, saving the note and image attachments to custom folders. 右键解析文档为 Markdown，正文与图片附件分别保存到自定义位置。",
   "author": "luffysolution-svg",
