@@ -1,6 +1,7 @@
 import { App, Modal, Notice, requestUrl } from "obsidian";
 import type MinerUPlugin from "../main";
 import { checkMarkitdown } from "../parsers/markitdown";
+import { checkDocling } from "../parsers/docling";
 
 interface CheckLine {
 	ok: boolean | "warn";
@@ -46,6 +47,15 @@ export async function runDiagnostics(plugin: MinerUPlugin): Promise<void> {
 			: "markitdown：未检测到 / not found（pip install 'markitdown[all]'）",
 	});
 
+	// docling CLI.
+	const doclingVersion = await checkDocling(s.doclingCommand);
+	lines.push({
+		ok: doclingVersion ? true : s.parser === "docling" ? false : "warn",
+		label: doclingVersion
+			? `docling：可用 / available (${doclingVersion})`
+			: "docling：未检测到 / not found（pip install docling）",
+	});
+
 	// Vision LLM OCR.
 	if (s.visionApiKey.trim() && s.visionBaseUrl.trim() && s.visionModel.trim()) {
 		lines.push({
@@ -69,6 +79,32 @@ export async function runDiagnostics(plugin: MinerUPlugin): Promise<void> {
 		lines.push({
 			ok: s.parser === "baidu" ? false : "warn",
 			label: "百度 OCR：未配置（需 API Key 与 Secret Key）/ not configured",
+		});
+	}
+
+	// TextIn (合合).
+	if (s.textinAppId.trim() && s.textinSecretCode.trim()) {
+		lines.push({
+			ok: s.parser === "textin" ? "warn" : true,
+			label: 'TextIn 合合：已配置 / configured（用"测试 TextIn"命令验证）',
+		});
+	} else {
+		lines.push({
+			ok: s.parser === "textin" ? false : "warn",
+			label: "TextIn 合合：未配置（需 App ID 与 Secret Code）/ not configured",
+		});
+	}
+
+	// Doc2X.
+	if (s.doc2xApiKey.trim()) {
+		lines.push({
+			ok: s.parser === "doc2x" ? "warn" : true,
+			label: 'Doc2X：已配置 API Key / configured（用"测试 Doc2X"命令验证）',
+		});
+	} else {
+		lines.push({
+			ok: s.parser === "doc2x" ? false : "warn",
+			label: "Doc2X：未配置（需 API Key）/ not configured",
 		});
 	}
 

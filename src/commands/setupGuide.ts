@@ -2,9 +2,14 @@ import { App, Modal, Setting } from "obsidian";
 import {
 	BAIDU_CONSOLE_URL,
 	BAIDU_DOCS_URL,
+	DOC2X_CONSOLE_URL,
+	DOC2X_DOCS_URL,
+	DOCLING_REPO_URL,
 	MARKITDOWN_REPO_URL,
 	MINERU_DOCS_URL,
 	MINERU_TOKEN_URL,
+	TEXTIN_CONSOLE_URL,
+	TEXTIN_DOCS_URL,
 } from "../settings";
 
 /**
@@ -47,6 +52,11 @@ export class SetupGuideModal extends Modal {
 		this.linkItem(links, "markitdown 仓库 / repo", MARKITDOWN_REPO_URL);
 		this.linkItem(links, "百度 OCR 控制台 / Baidu console", BAIDU_CONSOLE_URL);
 		this.linkItem(links, "百度文档解析文档 / Baidu doc parsing", BAIDU_DOCS_URL);
+		this.linkItem(links, "docling 项目 / repo", DOCLING_REPO_URL);
+		this.linkItem(links, "TextIn 控制台 / console", TEXTIN_CONSOLE_URL);
+		this.linkItem(links, "TextIn 文档 / docs", TEXTIN_DOCS_URL);
+		this.linkItem(links, "Doc2X 控制台 / console", DOC2X_CONSOLE_URL);
+		this.linkItem(links, "Doc2X 文档 / docs", DOC2X_DOCS_URL);
 	}
 
 	private renderConcise(el: HTMLElement): void {
@@ -66,6 +76,15 @@ export class SetupGuideModal extends Modal {
 		});
 		ol.createEl("li", {
 			text: "百度 OCR（文档解析）：在百度智能云创建应用、开通「文字识别」服务，填入 API Key 与 Secret Key，点「测试」通过后即可右键解析。支持 PDF / 图片 / Office，输出含表格公式的 Markdown。",
+		});
+		ol.createEl("li", {
+			text: "docling：先 pip install docling，再在设置里切换后端。本地 CLI，输出 Markdown（无图片附件），仅桌面端。",
+		});
+		ol.createEl("li", {
+			text: "TextIn 合合（文档解析）：在 TextIn 控制台获取 App ID 与 Secret Code 填入设置，点「测试」通过后即可右键解析。支持 PDF / 图片 / Office，输出含表格公式的 Markdown。",
+		});
+		ol.createEl("li", {
+			text: "Doc2X（文档解析）：在 Doc2X 控制台获取 API Key（sk-...）填入设置，点「测试」通过后即可右键解析。擅长 PDF 公式 / 表格 / 版面。",
 		});
 	}
 
@@ -119,6 +138,40 @@ export class SetupGuideModal extends Modal {
 		});
 		b.createEl("li", {
 			text: "免费额度与计费以百度控制台为准。配置后用「测试」按钮或「测试百度 OCR」命令验证。",
+		});
+
+		el.createEl("h4", { text: "docling（本地 / local）" });
+		const d = el.createEl("ul");
+		const liDocling = d.createEl("li");
+		liDocling.append("安装：");
+		liDocling.createEl("code", { text: "pip install docling" });
+		d.createEl("li", {
+			text: "需要本地已安装 Python；命令默认 docling，可在设置中改为完整路径。",
+		});
+		d.createEl("li", { text: "仅桌面端可用；输出 Markdown，不提取图片附件。" });
+
+		el.createEl("h4", { text: "TextIn 合合（文档解析 / TextIn）" });
+		const t = el.createEl("ul");
+		t.createEl("li", {
+			text: "合合 TextIn xParse「文档解析」接口，支持 PDF / 图片 / Office，直接输出 Markdown（含表格、公式、版面）。",
+		});
+		t.createEl("li", {
+			text: "配置：在 TextIn 控制台获取 App ID（x-ti-app-id）与 Secret Code（x-ti-secret-code）填入设置。",
+		});
+		t.createEl("li", {
+			text: "配置后用「测试」按钮或「测试 TextIn」命令验证。",
+		});
+
+		el.createEl("h4", { text: "Doc2X（文档解析 / Doc2X）" });
+		const dx = el.createEl("ul");
+		dx.createEl("li", {
+			text: "Doc2X 文档解析接口，擅长 PDF（公式 / 表格 / 版面），直接输出 Markdown。",
+		});
+		dx.createEl("li", {
+			text: "配置：在 Doc2X 控制台获取 API Key（形如 sk-...）填入设置。",
+		});
+		dx.createEl("li", {
+			text: "异步解析：上传后轮询直到完成。配置后用「测试」按钮或「测试 Doc2X」命令验证。",
 		});
 
 		el.createEl("h4", { text: "保存位置 / Save location" });

@@ -9,12 +9,17 @@ import { MinerUParser } from "./parsers/minerU";
 import { MarkitdownParser } from "./parsers/markitdown";
 import { VisionOcrParser } from "./parsers/visionOcr";
 import { BaiduOcrParser } from "./parsers/baiduOcr";
+import { DoclingParser } from "./parsers/docling";
+import { TextinParser } from "./parsers/textin";
+import { Doc2xParser } from "./parsers/doc2x";
 import { notifyError, notifySuccess, saveParseResult } from "./core/saver";
 import { runDiagnostics } from "./commands/diagnostics";
 import { SetupGuideModal } from "./commands/setupGuide";
 import { ApiConfigModal } from "./ui/apiConfigModal";
 import { testVision } from "./parsers/visionOcr";
 import { testBaidu } from "./parsers/baiduOcr";
+import { testTextin } from "./parsers/textin";
+import { testDoc2x } from "./parsers/doc2x";
 
 export default class MinerUPlugin extends Plugin {
 	settings!: PluginSettings;
@@ -24,6 +29,9 @@ export default class MinerUPlugin extends Plugin {
 		markitdown: new MarkitdownParser(),
 		vision: new VisionOcrParser(),
 		baidu: new BaiduOcrParser(),
+		docling: new DoclingParser(),
+		textin: new TextinParser(),
+		doc2x: new Doc2xParser(),
 	};
 
 	async onload(): Promise<void> {
@@ -75,6 +83,26 @@ export default class MinerUPlugin extends Plugin {
 			callback: async () => {
 				const notice = new Notice("测试百度 OCR 中 / Testing Baidu...", 0);
 				const r = await testBaidu(this.settings);
+				notice.hide();
+				new Notice((r.ok ? "✓ " : "❌ ") + r.detail, r.ok ? 6000 : 10000);
+			},
+		});
+		this.addCommand({
+			id: "test-textin",
+			name: "测试 TextIn 合合 / Test TextIn",
+			callback: async () => {
+				const notice = new Notice("测试 TextIn 中 / Testing TextIn...", 0);
+				const r = await testTextin(this.settings);
+				notice.hide();
+				new Notice((r.ok ? "✓ " : "❌ ") + r.detail, r.ok ? 6000 : 10000);
+			},
+		});
+		this.addCommand({
+			id: "test-doc2x",
+			name: "测试 Doc2X / Test Doc2X",
+			callback: async () => {
+				const notice = new Notice("测试 Doc2X 中 / Testing Doc2X...", 0);
+				const r = await testDoc2x(this.settings);
 				notice.hide();
 				new Notice((r.ok ? "✓ " : "❌ ") + r.detail, r.ok ? 6000 : 10000);
 			},

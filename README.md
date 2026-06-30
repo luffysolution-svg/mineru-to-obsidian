@@ -8,15 +8,18 @@
 ## 功能 / Features
 
 - 在文件浏览器中右键文档，选择 **解析文档 / Parse document**。
-- 四个解析后端：
+- 七个解析后端：
   - **MinerU**（云端）— 免费模式（无需 Token）或 Precision API（带 Token，支持提取图片附件）。
   - **markitdown**（本地）— 调用本地 Python CLI，仅桌面端，不提取图片。
+  - **docling**（本地）— 调用本地 Python CLI，仅桌面端，输出 Markdown，不提取图片。
   - **视觉 LLM OCR**（识图）— 用 OpenAI 兼容接口的视觉模型识别**图片**中的文字并转为 Markdown，兼容第三方中转站（new-api / one-api 等）。
   - **百度 OCR**（文档解析）— 百度智能云文档解析接口，支持 **PDF / 图片 / Office**，直接输出含表格、公式、版面的 Markdown。
+  - **TextIn 合合**（文档解析）— 合合 TextIn xParse 接口，支持 **PDF / 图片 / Office**，直接输出含表格、公式、版面的 Markdown。
+  - **Doc2X**（文档解析）— Doc2X 文档解析接口，擅长 **PDF** 的公式 / 表格 / 版面，直接输出 Markdown。
 - 自定义 Markdown 与附件保存路径，支持变量 `{filename}` `{date}` `{noteName}`。
 - 附件重命名：保留原名 / `{noteName}-{序号}` / `{date}-{序号}` / 自定义模板。
 - 成功 / 失败 Notice 提示。
-- 命令：**检测配置**、**安装与配置引导**、**配置 MinerU API**、**测试视觉 OCR**、**测试百度 OCR**。
+- 命令：**检测配置**、**安装与配置引导**、**配置 MinerU API**、**测试视觉 OCR**、**测试百度 OCR**、**测试 TextIn**、**测试 Doc2X**。
 
 支持的文件类型 / Supported: `pdf, doc, docx, ppt, pptx, xls, xlsx, png, jpg, jpeg, jp2, webp, gif, bmp, html`。
 
@@ -108,6 +111,41 @@ pip install 'markitdown[all]'
 - 需在控制台**开通「文字识别」服务**并完成**实名认证**才能领取免费额度并调用。免费额度与计费以百度控制台为准。
 - **测试 / Test**：发送一张含已知数字的测试图，验证鉴权、接口权限与解析流程。也可用命令 **测试百度 OCR**。
 
+### docling
+
+```bash
+pip install docling
+```
+
+- 默认命令为 `docling`，可在设置中改为完整路径。
+- 需要本地已安装 Python；输出 Markdown，不提取图片附件；仅桌面端。
+- 项目：<https://github.com/docling-project/docling>
+
+### TextIn 合合（文档解析）/ TextIn
+
+合合 TextIn xParse「文档解析」接口，支持 **PDF / 图片 / Office**，直接输出含表格、公式、版面的 Markdown。单次同步调用，鉴权用 App ID + Secret Code。
+
+| 配置项 | 说明 |
+|--------|------|
+| App ID | 请求头 `x-ti-app-id` |
+| Secret Code | 请求头 `x-ti-secret-code` |
+
+- 控制台（获取密钥）：<https://www.textin.com/console/dashboard/setting>
+- 文档：<https://docs.textin.com/xparse/parse-quickstart>
+- **测试 / Test**：发送一张含已知数字的测试图，验证鉴权与解析流程。也可用命令 **测试 TextIn**。
+
+### Doc2X（文档解析）/ Doc2X
+
+Doc2X 文档解析接口，擅长 **PDF** 的公式 / 表格 / 版面，直接输出 Markdown。异步流程：上传后插件自动轮询直到完成。鉴权用 `Bearer` API Key（形如 `sk-...`）。
+
+| 配置项 | 说明 |
+|--------|------|
+| API Key | Bearer 鉴权密钥（形如 `sk-...`） |
+
+- 控制台（获取 Key）：<https://open.noedgeai.com>
+- 文档：<https://doc2x.noedgeai.com/help/en/api/doc2x-api-v2-pdf-interface.html>
+- **测试 / Test**：发送一份测试 PDF，验证鉴权与解析流程。也可用命令 **测试 Doc2X**。
+
 ### 保存路径 / Save paths
 
 - **Markdown 文件夹** 与 **附件文件夹** 均支持变量 `{filename}`（原文件名）、`{date}`（YYYY-MM-DD）、`{noteName}`。
@@ -122,6 +160,8 @@ pip install 'markitdown[all]'
 - **配置 MinerU API / Configure MinerU API** — 快速填写 Token。
 - **测试视觉 OCR / Test vision OCR** — 验证视觉模型的连接、鉴权与识图能力。
 - **测试百度 OCR / Test Baidu OCR** — 验证百度 AK/SK 的鉴权、接口权限与解析流程。
+- **测试 TextIn / Test TextIn** — 验证 TextIn App ID/Secret Code 的鉴权与解析流程。
+- **测试 Doc2X / Test Doc2X** — 验证 Doc2X API Key 的鉴权与解析流程。
 
 ---
 
@@ -135,8 +175,11 @@ pip install 'markitdown[all]'
 **后端如何选择？**
 - **MinerU**：扫描件、复杂版面、需要图片/公式/表格、CID 编码 PDF → 首选。
 - **markitdown**：Office 文档（docx/pptx/xlsx）、文本规整的 PDF、离线快速转换。
+- **docling**：本地离线转换，文本规整的 PDF / Office，无需联网。
 - **视觉 LLM OCR**：单张图片/截图的文字识别，或想用自己的（中转）大模型转写图片时。
 - **百度 OCR**：国内网络、需要稳定的 PDF / Office → Markdown，且想用百度免费额度时。
+- **TextIn 合合**：国内网络，需要高质量 PDF / 图片 / Office → Markdown（表格/公式/版面）。
+- **Doc2X**：PDF 公式 / 表格 / 学术文档的高质量转写。
 
 **插件不显示？** 安装/更新后需在 Obsidian 中重载（`Ctrl+P` → "Reload app without saving"），并确认未开启「受限模式」。
 

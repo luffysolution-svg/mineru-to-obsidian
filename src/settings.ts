@@ -5,6 +5,8 @@ import { SetupGuideModal } from "./commands/setupGuide";
 import { runDiagnostics } from "./commands/diagnostics";
 import { testVision, fetchModels } from "./parsers/visionOcr";
 import { testBaidu } from "./parsers/baiduOcr";
+import { testTextin } from "./parsers/textin";
+import { testDoc2x } from "./parsers/doc2x";
 
 /** MinerU token management page — where users obtain an API token. */
 export const MINERU_TOKEN_URL = "https://mineru.net/apiManage/token";
@@ -14,6 +16,15 @@ export const MARKITDOWN_REPO_URL = "https://github.com/microsoft/markitdown";
 export const BAIDU_CONSOLE_URL =
 	"https://console.bce.baidu.com/ai/#/ai/ocr/overview/index";
 export const BAIDU_DOCS_URL = "https://cloud.baidu.com/doc/OCR/s/Klxag8wiy";
+/** docling project page (install + CLI docs). */
+export const DOCLING_REPO_URL = "https://github.com/docling-project/docling";
+/** TextIn (合合) console — where users get app id + secret code. */
+export const TEXTIN_CONSOLE_URL = "https://www.textin.com/console/dashboard/setting";
+export const TEXTIN_DOCS_URL = "https://docs.textin.com/xparse/parse-quickstart";
+/** Doc2X console — where users get an sk- API key. */
+export const DOC2X_CONSOLE_URL = "https://open.noedgeai.com";
+export const DOC2X_DOCS_URL =
+	"https://doc2x.noedgeai.com/help/en/api/doc2x-api-v2-pdf-interface.html";
 
 export type RenameMode = "keep" | "note-index" | "date-index" | "custom";
 
@@ -53,6 +64,17 @@ export interface PluginSettings {
 	/** Baidu OCR: recognize formulas in the document. */
 	baiduRecognizeFormula: boolean;
 
+	/** docling CLI command (default "docling"). */
+	doclingCommand: string;
+
+	/** TextIn (合合): app id (x-ti-app-id). */
+	textinAppId: string;
+	/** TextIn (合合): secret code (x-ti-secret-code). */
+	textinSecretCode: string;
+
+	/** Doc2X: Bearer API key (sk-...). */
+	doc2xApiKey: string;
+
 	/** Folder for the generated markdown note. Supports {filename} {date}. */
 	markdownSavePath: string;
 	/** Folder for extracted image attachments. Supports {filename} {date} {noteName}. */
@@ -82,6 +104,10 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	baiduApiKey: "",
 	baiduSecretKey: "",
 	baiduRecognizeFormula: true,
+	doclingCommand: "docling",
+	textinAppId: "",
+	textinSecretCode: "",
+	doc2xApiKey: "",
 	markdownSavePath: "MinerU/{filename}",
 	attachmentSavePath: "MinerU/{filename}/images",
 	attachmentRename: "note-index",
@@ -108,8 +134,11 @@ export class MinerUSettingTab extends PluginSettingTab {
 				dd
 					.addOption("mineru", "MinerU (云端 / cloud)")
 					.addOption("markitdown", "markitdown (本地 CLI / local)")
+					.addOption("docling", "docling (本地 CLI / local)")
 					.addOption("vision", "视觉 LLM OCR (识图 / vision)")
 					.addOption("baidu", "百度 OCR (文档解析 / Baidu)")
+					.addOption("textin", "TextIn 合合 (文档解析 / TextIn)")
+					.addOption("doc2x", "Doc2X (文档解析 / Doc2X)")
 					.setValue(this.plugin.settings.parser)
 					.onChange(async (v) => {
 						this.plugin.settings.parser = v as ParserId;
@@ -122,8 +151,14 @@ export class MinerUSettingTab extends PluginSettingTab {
 			this.displayMinerUSettings(containerEl);
 		} else if (this.plugin.settings.parser === "markitdown") {
 			this.displayMarkitdownSettings(containerEl);
+		} else if (this.plugin.settings.parser === "docling") {
+			this.displayDoclingSettings(containerEl);
 		} else if (this.plugin.settings.parser === "baidu") {
 			this.displayBaiduSettings(containerEl);
+		} else if (this.plugin.settings.parser === "textin") {
+			this.displayTextinSettings(containerEl);
+		} else if (this.plugin.settings.parser === "doc2x") {
+			this.displayDoc2xSettings(containerEl);
 		} else {
 			this.displayVisionSettings(containerEl);
 		}
@@ -234,6 +269,152 @@ export class MinerUSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+	}
+
+	private displayDoclingSettings(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("docling").setHeading();
+
+		const desc = document.createDocumentFragment();
+		desc.append(
+			"本地命令，需先安装：",
+			createEl("code", { text: "pip install docling" }),
+			"。docling 不提取图片附件。仅桌面端可用。"
+		);
+		new Setting(containerEl)
+			.setName("docling 命令 / command")
+			.setDesc(desc)
+			.addText((text) =>
+				text
+					.setPlaceholder("docling")
+					.setValue(this.plugin.settings.doclingCommand)
+					.onChange(async (v) => {
+						this.plugin.settings.doclingCommand = v.trim() || "docling";
+						await this.plugin.saveSettings();
+					})
+			)
+			.addExtraButton((btn) =>
+				btn
+					.setIcon("external-link")
+					.setTooltip("docling 项目 / repo: " + DOCLING_REPO_URL)
+					.onClick(() => window.open(DOCLING_REPO_URL))
+			);
+	}
+
+	private displayTextinSettings(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("TextIn 合合（文档解析）").setHeading();
+
+		const desc = document.createDocumentFragment();
+		desc.append(
+			"使用合合 TextIn xParse「文档解析」接口，支持 PDF / 图片 / Office，直接输出 Markdown（含表格、公式、版面）。",
+			createEl("br"),
+			"需在 TextIn 控制台获取 App ID 与 Secret Code。"
+		);
+		new Setting(containerEl).setDesc(desc);
+
+		new Setting(containerEl)
+			.setName("App ID（x-ti-app-id）")
+			.setDesc("应用的 App ID。")
+			.addText((text) => {
+				text.inputEl.type = "password";
+				text
+					.setPlaceholder("x-ti-app-id ...")
+					.setValue(this.plugin.settings.textinAppId)
+					.onChange(async (v) => {
+						this.plugin.settings.textinAppId = v.trim();
+						await this.plugin.saveSettings();
+					});
+			})
+			.addExtraButton((btn) =>
+				btn
+					.setIcon("external-link")
+					.setTooltip("获取密钥 / Get keys: " + TEXTIN_CONSOLE_URL)
+					.onClick(() => window.open(TEXTIN_CONSOLE_URL))
+			);
+
+		new Setting(containerEl)
+			.setName("Secret Code（x-ti-secret-code）")
+			.setDesc("应用的 Secret Code。")
+			.addText((text) => {
+				text.inputEl.type = "password";
+				text
+					.setPlaceholder("x-ti-secret-code ...")
+					.setValue(this.plugin.settings.textinSecretCode)
+					.onChange(async (v) => {
+						this.plugin.settings.textinSecretCode = v.trim();
+						await this.plugin.saveSettings();
+					});
+			});
+
+		this.addTestButton(containerEl, () => testTextin(this.plugin.settings));
+	}
+
+	private displayDoc2xSettings(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("Doc2X").setHeading();
+
+		const desc = document.createDocumentFragment();
+		desc.append(
+			"使用 Doc2X 文档解析接口，擅长 PDF（公式 / 表格 / 版面），直接输出 Markdown。",
+			createEl("br"),
+			"需在 Doc2X 控制台获取 API Key（形如 sk-...）。"
+		);
+		new Setting(containerEl).setDesc(desc);
+
+		new Setting(containerEl)
+			.setName("API Key")
+			.setDesc("Bearer 鉴权密钥（形如 sk-...）。")
+			.addText((text) => {
+				text.inputEl.type = "password";
+				text
+					.setPlaceholder("sk-...")
+					.setValue(this.plugin.settings.doc2xApiKey)
+					.onChange(async (v) => {
+						this.plugin.settings.doc2xApiKey = v.trim();
+						await this.plugin.saveSettings();
+					});
+			})
+			.addExtraButton((btn) =>
+				btn
+					.setIcon("external-link")
+					.setTooltip("获取 Key / Get key: " + DOC2X_CONSOLE_URL)
+					.onClick(() => window.open(DOC2X_CONSOLE_URL))
+			);
+
+		this.addTestButton(containerEl, () => testDoc2x(this.plugin.settings));
+	}
+
+	/**
+	 * Append a "test connection" button with a colored result line, sharing the
+	 * pattern used by the vision / Baidu backends.
+	 */
+	private addTestButton(
+		containerEl: HTMLElement,
+		run: () => Promise<{ ok: boolean; detail: string }>
+	): void {
+		const resultEl = createEl("div", {
+			cls: "setting-item-description",
+			text: "",
+		});
+		new Setting(containerEl)
+			.setName("测试连接 / Test")
+			.setDesc("发送一份测试样本，验证鉴权、接口权限与解析流程。")
+			.addButton((btn) =>
+				btn
+					.setButtonText("测试 / Test")
+					.setCta()
+					.onClick(async () => {
+						btn.setDisabled(true);
+						btn.setButtonText("测试中 / Testing...");
+						resultEl.setText("");
+						const r = await run();
+						resultEl.setText((r.ok ? "✓ " : "✗ ") + r.detail);
+						resultEl.style.color = r.ok
+							? "var(--text-success)"
+							: "var(--text-error)";
+						btn.setDisabled(false);
+						btn.setButtonText("测试 / Test");
+					})
+			);
+		containerEl.appendChild(resultEl);
 	}
 
 	private displayVisionSettings(containerEl: HTMLElement): void {
@@ -562,6 +743,30 @@ export class MinerUSettingTab extends PluginSettingTab {
 			)
 			.addButton((btn) =>
 				btn.setButtonText("控制台 / Console").onClick(() => window.open(BAIDU_CONSOLE_URL))
+			);
+
+		new Setting(containerEl)
+			.setName("TextIn 合合 / TextIn")
+			.addButton((btn) =>
+				btn.setButtonText("文档 / Docs").onClick(() => window.open(TEXTIN_DOCS_URL))
+			)
+			.addButton((btn) =>
+				btn.setButtonText("控制台 / Console").onClick(() => window.open(TEXTIN_CONSOLE_URL))
+			);
+
+		new Setting(containerEl)
+			.setName("Doc2X")
+			.addButton((btn) =>
+				btn.setButtonText("文档 / Docs").onClick(() => window.open(DOC2X_DOCS_URL))
+			)
+			.addButton((btn) =>
+				btn.setButtonText("控制台 / Console").onClick(() => window.open(DOC2X_CONSOLE_URL))
+			);
+
+		new Setting(containerEl)
+			.setName("docling")
+			.addButton((btn) =>
+				btn.setButtonText("项目 / Repo").onClick(() => window.open(DOCLING_REPO_URL))
 			);
 	}
 }
