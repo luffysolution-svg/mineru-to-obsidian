@@ -43,7 +43,15 @@ export class DoclingParser implements Parser {
 async function runDocling(command: string, filePath: string): Promise<string> {
 	const outDir = await fs.mkdtemp(path.join(os.tmpdir(), "docling-"));
 	try {
-		await execFileAsync(command, [filePath, "--to", "md", "--output", outDir]);
+		// docling needs the `convert` subcommand; bare `docling <file>` is a no-op.
+		await execFileAsync(command, [
+			"convert",
+			filePath,
+			"--to",
+			"md",
+			"--output",
+			outDir,
+		]);
 		// docling writes <basename>.md into the output directory.
 		const entries = await fs.readdir(outDir);
 		const mdName =
@@ -95,7 +103,9 @@ export function checkDocling(command: string): Promise<string | null> {
 		execFile(
 			command.trim() || "docling",
 			["--version"],
-			{ windowsHide: true, timeout: 10000 },
+			// docling's `--version` loads heavy imports and can take ~15s on first
+			// call, so allow a generous timeout to avoid a false "not found".
+			{ windowsHide: true, timeout: 40000 },
 			(err, stdout) => {
 				resolve(err ? null : stdout.trim() || "ok");
 			}

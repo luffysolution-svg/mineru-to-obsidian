@@ -110,11 +110,12 @@ async function pollStatus(
 		const data = unwrap<StatusData>(res.json ?? {});
 		if (data.status === "success") {
 			const pages = data.result?.pages ?? [];
-			return pages
+			const md = pages
 				.slice()
 				.sort((a, b) => a.page_idx - b.page_idx)
 				.map((p) => p.md ?? "")
 				.join("\n\n");
+			return normalizeFormulas(md);
 		}
 		if (data.status === "failed") {
 			throw new Error("Doc2X 解析失败 / failed: " + (data.detail || ""));
@@ -122,6 +123,17 @@ async function pollStatus(
 		await sleep(POLL_INTERVAL_MS);
 	}
 	throw new Error("Doc2X 解析超时 / timed out");
+}
+
+/**
+ * Doc2X returns LaTeX math with `\( ... \)` (inline) and `\[ ... \]` (block)
+ * delimiters, which Obsidian does not render. Rewrite them to Obsidian's
+ * `$ ... $` and `$$ ... $$` so formulas display correctly.
+ */
+function normalizeFormulas(md: string): string {
+	return md
+		.replace(/\\\[([\s\S]*?)\\\]/g, (_m, body) => `$$${body}$$`)
+		.replace(/\\\(([\s\S]*?)\\\)/g, (_m, body) => `$${body}$`);
 }
 
 /**
