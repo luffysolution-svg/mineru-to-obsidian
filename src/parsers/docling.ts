@@ -39,19 +39,37 @@ export class DoclingParser implements Parser {
 /**
  * Run `docling <file> --to md --output <tempDir>`, then read the produced
  * `<basename>.md` from the temp dir. Cleans up the temp dir afterwards.
+ *
+ * docling's default PDF backend (docling_parse) rejects some malformed PDFs
+ * ("Inconsistent number of pages") and then crashes on Windows while cleaning
+ * up its own temp copy (WinError 32). The more tolerant `pypdfium2` backend
+ * usually parses those files, so we retry with it once on failure.
  */
 async function runDocling(command: string, filePath: string): Promise<string> {
+	try {
+		return await runDoclingOnce(command, filePath, null);
+	} catch (err) {
+		// A missing CLI won't be fixed by changing the backend; surface it as-is.
+		if (/找不到命令|pip install docling/.test((err as Error).message)) {
+			throw err;
+		}
+		// Retry with the lenient pypdfium2 backend before giving up.
+		return await runDoclingOnce(command, filePath, "pypdfium2");
+	}
+}
+
+/** Single docling invocation, optionally pinning a PDF backend. */
+async function runDoclingOnce(
+	command: string,
+	filePath: string,
+	pdfBackend: string | null
+): Promise<string> {
 	const outDir = await fs.mkdtemp(path.join(os.tmpdir(), "docling-"));
 	try {
 		// docling needs the `convert` subcommand; bare `docling <file>` is a no-op.
-		await execFileAsync(command, [
-			"convert",
-			filePath,
-			"--to",
-			"md",
-			"--output",
-			outDir,
-		]);
+		const args = ["convert", filePath, "--to", "md", "--output", outDir];
+		if (pdfBackend) args.push("--pdf-backend", pdfBackend);
+		await execFileAsync(command, args);
 		// docling writes <basename>.md into the output directory.
 		const entries = await fs.readdir(outDir);
 		const mdName =
@@ -63,7 +81,13 @@ async function runDocling(command: string, filePath: string): Promise<string> {
 		if (!mdName) {
 			throw new Error("docling 未生成 Markdown 文件 / no markdown produced");
 		}
-		return await fs.readFile(path.join(outDir, mdName), "utf-8");
+		const md = await fs.readFile(path.join(outDir, mdName), "utf-8");
+		// docling can exit 0 yet write an empty .md when the backend fails to
+		// decode the PDF; treat that as a failure so the caller can retry.
+		if (!md.trim()) {
+			throw new Error("docling 返回空内容 / produced empty markdown");
+		}
+		return md;
 	} finally {
 		await fs.rm(outDir, { recursive: true, force: true }).catch(() => {});
 	}
