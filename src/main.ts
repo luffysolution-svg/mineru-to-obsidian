@@ -8,11 +8,13 @@ import { Parser, ParserId, SUPPORTED_EXTENSIONS } from "./parsers/types";
 import { MinerUParser } from "./parsers/minerU";
 import { MarkitdownParser } from "./parsers/markitdown";
 import { VisionOcrParser } from "./parsers/visionOcr";
+import { BaiduOcrParser } from "./parsers/baiduOcr";
 import { notifyError, notifySuccess, saveParseResult } from "./core/saver";
 import { runDiagnostics } from "./commands/diagnostics";
 import { SetupGuideModal } from "./commands/setupGuide";
 import { ApiConfigModal } from "./ui/apiConfigModal";
 import { testVision } from "./parsers/visionOcr";
+import { testBaidu } from "./parsers/baiduOcr";
 
 export default class MinerUPlugin extends Plugin {
 	settings!: PluginSettings;
@@ -21,6 +23,7 @@ export default class MinerUPlugin extends Plugin {
 		mineru: new MinerUParser(),
 		markitdown: new MarkitdownParser(),
 		vision: new VisionOcrParser(),
+		baidu: new BaiduOcrParser(),
 	};
 
 	async onload(): Promise<void> {
@@ -62,6 +65,16 @@ export default class MinerUPlugin extends Plugin {
 			callback: async () => {
 				const notice = new Notice("测试识图中 / Testing vision...", 0);
 				const r = await testVision(this.settings);
+				notice.hide();
+				new Notice((r.ok ? "✓ " : "❌ ") + r.detail, r.ok ? 6000 : 10000);
+			},
+		});
+		this.addCommand({
+			id: "test-baidu-ocr",
+			name: "测试百度 OCR / Test Baidu OCR",
+			callback: async () => {
+				const notice = new Notice("测试百度 OCR 中 / Testing Baidu...", 0);
+				const r = await testBaidu(this.settings);
 				notice.hide();
 				new Notice((r.ok ? "✓ " : "❌ ") + r.detail, r.ok ? 6000 : 10000);
 			},

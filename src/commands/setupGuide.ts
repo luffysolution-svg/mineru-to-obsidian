@@ -1,5 +1,7 @@
 import { App, Modal, Setting } from "obsidian";
 import {
+	BAIDU_CONSOLE_URL,
+	BAIDU_DOCS_URL,
 	MARKITDOWN_REPO_URL,
 	MINERU_DOCS_URL,
 	MINERU_TOKEN_URL,
@@ -43,6 +45,8 @@ export class SetupGuideModal extends Modal {
 		this.linkItem(links, "MinerU 获取 Token / Get token", MINERU_TOKEN_URL);
 		this.linkItem(links, "MinerU API 文档 / API docs", MINERU_DOCS_URL);
 		this.linkItem(links, "markitdown 仓库 / repo", MARKITDOWN_REPO_URL);
+		this.linkItem(links, "百度 OCR 控制台 / Baidu console", BAIDU_CONSOLE_URL);
+		this.linkItem(links, "百度文档解析文档 / Baidu doc parsing", BAIDU_DOCS_URL);
 	}
 
 	private renderConcise(el: HTMLElement): void {
@@ -59,6 +63,9 @@ export class SetupGuideModal extends Modal {
 		});
 		ol.createEl("li", {
 			text: "视觉 LLM OCR（识别图片文字）：在设置中填 API 地址 / Key / 视觉模型，点「测试识图」通过后即可右键图片解析。支持 OpenAI 兼容中转站。",
+		});
+		ol.createEl("li", {
+			text: "百度 OCR（文档解析）：在百度智能云创建应用、开通「文字识别」服务，填入 API Key 与 Secret Key，点「测试」通过后即可右键解析。支持 PDF / 图片 / Office，输出含表格公式的 Markdown。",
 		});
 	}
 
@@ -97,6 +104,21 @@ export class SetupGuideModal extends Modal {
 		});
 		v.createEl("li", {
 			text: "兼容第三方 OpenAI 兼容服务（new-api / one-api 等中转站）。配置后用「测试识图」按钮或「测试视觉 OCR」命令验证。",
+		});
+		v.createEl("li", {
+			text: "用 DeepSeek-OCR：DeepSeek 无官方托管 API，可经第三方（如硅基流动）调用——地址填 https://api.siliconflow.cn/v1，模型填 deepseek-ai/DeepSeek-OCR。",
+		});
+
+		el.createEl("h4", { text: "百度 OCR（文档解析 / Baidu）" });
+		const b = el.createEl("ul");
+		b.createEl("li", {
+			text: "百度智能云「文档解析」接口，支持 PDF / 图片 / Office，直接输出 Markdown（含表格、公式、版面）。",
+		});
+		b.createEl("li", {
+			text: "配置：在百度智能云控制台创建应用、开通「文字识别」服务，获取 API Key 与 Secret Key 填入设置。需实名认证以领取免费额度。",
+		});
+		b.createEl("li", {
+			text: "免费额度与计费以百度控制台为准。配置后用「测试」按钮或「测试百度 OCR」命令验证。",
 		});
 
 		el.createEl("h4", { text: "保存位置 / Save location" });

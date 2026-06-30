@@ -4,11 +4,16 @@ import type { ParserId } from "./parsers/types";
 import { SetupGuideModal } from "./commands/setupGuide";
 import { runDiagnostics } from "./commands/diagnostics";
 import { testVision, fetchModels } from "./parsers/visionOcr";
+import { testBaidu } from "./parsers/baiduOcr";
 
 /** MinerU token management page — where users obtain an API token. */
 export const MINERU_TOKEN_URL = "https://mineru.net/apiManage/token";
 export const MINERU_DOCS_URL = "https://mineru.net/apiManage/docs";
 export const MARKITDOWN_REPO_URL = "https://github.com/microsoft/markitdown";
+/** Baidu AI Cloud OCR console — where users create an app and get AK/SK. */
+export const BAIDU_CONSOLE_URL =
+	"https://console.bce.baidu.com/ai/#/ai/ocr/overview/index";
+export const BAIDU_DOCS_URL = "https://cloud.baidu.com/doc/OCR/s/Klxag8wiy";
 
 export type RenameMode = "keep" | "note-index" | "date-index" | "custom";
 
@@ -41,6 +46,13 @@ export interface PluginSettings {
 	/** Vision-LLM OCR: prompt sent alongside the image. */
 	visionPrompt: string;
 
+	/** Baidu OCR (文档解析): API Key. */
+	baiduApiKey: string;
+	/** Baidu OCR (文档解析): Secret Key. */
+	baiduSecretKey: string;
+	/** Baidu OCR: recognize formulas in the document. */
+	baiduRecognizeFormula: boolean;
+
 	/** Folder for the generated markdown note. Supports {filename} {date}. */
 	markdownSavePath: string;
 	/** Folder for extracted image attachments. Supports {filename} {date} {noteName}. */
@@ -67,6 +79,9 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	visionModels: [],
 	visionPrompt:
 		"请将这张图片的内容完整转写为 Markdown，保留标题、列表、表格与公式结构，只输出 Markdown 正文，不要添加任何解释或代码块包裹。",
+	baiduApiKey: "",
+	baiduSecretKey: "",
+	baiduRecognizeFormula: true,
 	markdownSavePath: "MinerU/{filename}",
 	attachmentSavePath: "MinerU/{filename}/images",
 	attachmentRename: "note-index",
@@ -94,6 +109,7 @@ export class MinerUSettingTab extends PluginSettingTab {
 					.addOption("mineru", "MinerU (云端 / cloud)")
 					.addOption("markitdown", "markitdown (本地 CLI / local)")
 					.addOption("vision", "视觉 LLM OCR (识图 / vision)")
+					.addOption("baidu", "百度 OCR (文档解析 / Baidu)")
 					.setValue(this.plugin.settings.parser)
 					.onChange(async (v) => {
 						this.plugin.settings.parser = v as ParserId;
@@ -106,6 +122,8 @@ export class MinerUSettingTab extends PluginSettingTab {
 			this.displayMinerUSettings(containerEl);
 		} else if (this.plugin.settings.parser === "markitdown") {
 			this.displayMarkitdownSettings(containerEl);
+		} else if (this.plugin.settings.parser === "baidu") {
+			this.displayBaiduSettings(containerEl);
 		} else {
 			this.displayVisionSettings(containerEl);
 		}
@@ -360,6 +378,90 @@ export class MinerUSettingTab extends PluginSettingTab {
 		containerEl.appendChild(resultEl);
 	}
 
+	private displayBaiduSettings(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("百度 OCR（文档解析）").setHeading();
+
+		const desc = document.createDocumentFragment();
+		desc.append(
+			"使用百度智能云「文档解析」接口，支持 PDF / 图片 / Office，直接输出 Markdown（含表格、公式、版面）。",
+			createEl("br"),
+			"需在百度智能云创建应用并开通「文字识别」服务，获取 API Key 与 Secret Key。需实名认证以领取免费额度。"
+		);
+		new Setting(containerEl).setDesc(desc);
+
+		new Setting(containerEl)
+			.setName("API Key")
+			.setDesc("应用的 API Key（client_id）。")
+			.addText((text) => {
+				text.inputEl.type = "password";
+				text
+					.setPlaceholder("API Key ...")
+					.setValue(this.plugin.settings.baiduApiKey)
+					.onChange(async (v) => {
+						this.plugin.settings.baiduApiKey = v.trim();
+						await this.plugin.saveSettings();
+					});
+			})
+			.addExtraButton((btn) =>
+				btn
+					.setIcon("external-link")
+					.setTooltip("获取 AK/SK / Get keys: " + BAIDU_CONSOLE_URL)
+					.onClick(() => window.open(BAIDU_CONSOLE_URL))
+			);
+
+		new Setting(containerEl)
+			.setName("Secret Key")
+			.setDesc("应用的 Secret Key（client_secret）。")
+			.addText((text) => {
+				text.inputEl.type = "password";
+				text
+					.setPlaceholder("Secret Key ...")
+					.setValue(this.plugin.settings.baiduSecretKey)
+					.onChange(async (v) => {
+						this.plugin.settings.baiduSecretKey = v.trim();
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName("公式识别 / Formula recognition")
+			.addToggle((t) =>
+				t
+					.setValue(this.plugin.settings.baiduRecognizeFormula)
+					.onChange(async (v) => {
+						this.plugin.settings.baiduRecognizeFormula = v;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// Test button + result line.
+		const resultEl = createEl("div", {
+			cls: "setting-item-description",
+			text: "",
+		});
+		new Setting(containerEl)
+			.setName("测试连接 / Test")
+			.setDesc("发送一张测试图，验证鉴权、接口权限与解析流程。")
+			.addButton((btn) =>
+				btn
+					.setButtonText("测试 / Test")
+					.setCta()
+					.onClick(async () => {
+						btn.setDisabled(true);
+						btn.setButtonText("测试中 / Testing...");
+						resultEl.setText("");
+						const r = await testBaidu(this.plugin.settings);
+						resultEl.setText((r.ok ? "✓ " : "✗ ") + r.detail);
+						resultEl.style.color = r.ok
+							? "var(--text-success)"
+							: "var(--text-error)";
+						btn.setDisabled(false);
+						btn.setButtonText("测试 / Test");
+					})
+			);
+		containerEl.appendChild(resultEl);
+	}
+
 	private displaySaveSettings(containerEl: HTMLElement): void {
 		new Setting(containerEl).setName("保存位置 / Save location").setHeading();
 
@@ -451,6 +553,15 @@ export class MinerUSettingTab extends PluginSettingTab {
 			)
 			.addButton((btn) =>
 				btn.setButtonText("获取 Token").onClick(() => window.open(MINERU_TOKEN_URL))
+			);
+
+		new Setting(containerEl)
+			.setName("百度 OCR 官方 / Baidu OCR")
+			.addButton((btn) =>
+				btn.setButtonText("文档解析文档").onClick(() => window.open(BAIDU_DOCS_URL))
+			)
+			.addButton((btn) =>
+				btn.setButtonText("控制台 / Console").onClick(() => window.open(BAIDU_CONSOLE_URL))
 			);
 	}
 }

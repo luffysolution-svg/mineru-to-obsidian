@@ -59,6 +59,19 @@ export async function runDiagnostics(plugin: MinerUPlugin): Promise<void> {
 		});
 	}
 
+	// Baidu OCR.
+	if (s.baiduApiKey.trim() && s.baiduSecretKey.trim()) {
+		lines.push({
+			ok: s.parser === "baidu" ? "warn" : true,
+			label: '百度 OCR：已配置 AK/SK / configured（用"测试百度 OCR"命令验证）',
+		});
+	} else {
+		lines.push({
+			ok: s.parser === "baidu" ? false : "warn",
+			label: "百度 OCR：未配置（需 API Key 与 Secret Key）/ not configured",
+		});
+	}
+
 	// Save paths.
 	lines.push({
 		ok: s.markdownSavePath ? true : false,

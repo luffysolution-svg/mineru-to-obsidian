@@ -8,14 +8,15 @@
 ## 功能 / Features
 
 - 在文件浏览器中右键文档，选择 **解析文档 / Parse document**。
-- 三个解析后端：
+- 四个解析后端：
   - **MinerU**（云端）— 免费模式（无需 Token）或 Precision API（带 Token，支持提取图片附件）。
   - **markitdown**（本地）— 调用本地 Python CLI，仅桌面端，不提取图片。
   - **视觉 LLM OCR**（识图）— 用 OpenAI 兼容接口的视觉模型识别**图片**中的文字并转为 Markdown，兼容第三方中转站（new-api / one-api 等）。
+  - **百度 OCR**（文档解析）— 百度智能云文档解析接口，支持 **PDF / 图片 / Office**，直接输出含表格、公式、版面的 Markdown。
 - 自定义 Markdown 与附件保存路径，支持变量 `{filename}` `{date}` `{noteName}`。
 - 附件重命名：保留原名 / `{noteName}-{序号}` / `{date}-{序号}` / 自定义模板。
 - 成功 / 失败 Notice 提示。
-- 命令：**检测配置**、**安装与配置引导**、**配置 MinerU API**、**测试视觉 OCR**。
+- 命令：**检测配置**、**安装与配置引导**、**配置 MinerU API**、**测试视觉 OCR**、**测试百度 OCR**。
 
 支持的文件类型 / Supported: `pdf, doc, docx, ppt, pptx, xls, xlsx, png, jpg, jpeg, jp2, webp, gif, bmp, html`。
 
@@ -90,6 +91,23 @@ pip install 'markitdown[all]'
 - **测试识图 / Test**：发送一张含已知数字的测试图，验证连接、鉴权与**识图能力**（连得上但模型不支持图片会明确提示）。也可用命令 **测试视觉 OCR**。
 - 仅支持图片：`png / jpg / jpeg / webp / gif / bmp`。其他文档请用 MinerU 或 markitdown。
 
+> **用 DeepSeek-OCR？** DeepSeek-OCR 是开源自托管模型，无官方托管 API。可经第三方（如硅基流动 SiliconFlow）以 OpenAI 兼容接口调用：地址填 `https://api.siliconflow.cn/v1`，模型填 `deepseek-ai/DeepSeek-OCR`，其余同上。
+
+### 百度 OCR（文档解析）/ Baidu OCR
+
+百度智能云「文档解析」接口，支持 **PDF / 图片 / Office**，直接输出含表格、公式、版面的 Markdown。鉴权用 API Key + Secret Key 换取 `access_token`（插件自动处理）。
+
+| 配置项 | 说明 |
+|--------|------|
+| API Key | 应用的 API Key（client_id） |
+| Secret Key | 应用的 Secret Key（client_secret） |
+| 公式识别 / Formula | 是否识别文档中的公式 |
+
+- 控制台（创建应用、获取 AK/SK）：<https://console.bce.baidu.com/ai/#/ai/ocr/overview/index>
+- 文档解析文档：<https://cloud.baidu.com/doc/OCR/s/Klxag8wiy>
+- 需在控制台**开通「文字识别」服务**并完成**实名认证**才能领取免费额度并调用。免费额度与计费以百度控制台为准。
+- **测试 / Test**：发送一张含已知数字的测试图，验证鉴权、接口权限与解析流程。也可用命令 **测试百度 OCR**。
+
 ### 保存路径 / Save paths
 
 - **Markdown 文件夹** 与 **附件文件夹** 均支持变量 `{filename}`（原文件名）、`{date}`（YYYY-MM-DD）、`{noteName}`。
@@ -103,6 +121,7 @@ pip install 'markitdown[all]'
 - **安装与配置引导 / Setup & configuration guide** — 简约 / 详细说明与官网链接。
 - **配置 MinerU API / Configure MinerU API** — 快速填写 Token。
 - **测试视觉 OCR / Test vision OCR** — 验证视觉模型的连接、鉴权与识图能力。
+- **测试百度 OCR / Test Baidu OCR** — 验证百度 AK/SK 的鉴权、接口权限与解析流程。
 
 ---
 
@@ -117,6 +136,7 @@ pip install 'markitdown[all]'
 - **MinerU**：扫描件、复杂版面、需要图片/公式/表格、CID 编码 PDF → 首选。
 - **markitdown**：Office 文档（docx/pptx/xlsx）、文本规整的 PDF、离线快速转换。
 - **视觉 LLM OCR**：单张图片/截图的文字识别，或想用自己的（中转）大模型转写图片时。
+- **百度 OCR**：国内网络、需要稳定的 PDF / Office → Markdown，且想用百度免费额度时。
 
 **插件不显示？** 安装/更新后需在 Obsidian 中重载（`Ctrl+P` → "Reload app without saving"），并确认未开启「受限模式」。
 
