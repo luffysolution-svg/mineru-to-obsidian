@@ -157,7 +157,76 @@ function normalizeFormulas(md: string): string {
 		/\\\(([\s\S]*?)\\\)/g,
 		(_m, body) => `$${String(body).trim()}$`
 	);
+	// Tables come back as raw HTML (Doc2X needs rowspan/colspan); Obsidian does
+	// NOT run MathJax inside raw HTML, so `$...$` in cells would show literally.
+	// Convert the math inside table cells to plain Unicode text instead.
+	out = renderTableMath(out);
+	// Repair `\text{_…}` — an underscore inside MathJax text mode is illegal and
+	// makes the WHOLE formula fail to parse (Doc2X emits this for labels like
+	// `E_{CO2_燃烧}`). Escaping the underscore lets the formula render.
+	out = escapeTextUnderscores(out);
 	return out;
+}
+
+const SUB_DIGITS: Record<string, string> = {
+	"0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄",
+	"5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉",
+};
+const SUP_DIGITS: Record<string, string> = {
+	"0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
+	"5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
+};
+
+/** Inside every `\text{...}`, escape bare underscores so MathJax can parse. */
+function escapeTextUnderscores(md: string): string {
+	return md.replace(/\\text\{([^{}]*)\}/g, (_m, body: string) => {
+		// Match `_` or `\_`; keep already-escaped ones, escape bare ones.
+		const fixed = body.replace(/\\?_/g, (t) => (t === "\\_" ? t : "\\_"));
+		return `\\text{${fixed}}`;
+	});
+}
+
+/** Within each `<table>...</table>`, turn `$...$` / `$$...$$` math into text. */
+function renderTableMath(md: string): string {
+	return md.replace(/<table>[\s\S]*?<\/table>/gi, (table) =>
+		table
+			.replace(/\$\$([\s\S]*?)\$\$/g, (_m, b) => latexToText(b))
+			.replace(/\$([^$\n]*?)\$/g, (_m, b) => latexToText(b))
+	);
+}
+
+/**
+ * Best-effort LaTeX -> plain Unicode for the simple unit/threshold expressions
+ * that appear in table cells (e.g. `\mathrm{{kg}}/\mathrm{t}` -> `kg/t`,
+ * `\leq  {0.80}` -> `≤0.80`, `{\mathrm{{tCO}}}_{2}/\mathrm{t}` -> `tCO₂/t`).
+ */
+function latexToText(tex: string): string {
+	let s = tex;
+	// Symbols and spacing macros.
+	s = s
+		.replace(/\\leq/g, "≤").replace(/\\geq/g, "≥")
+		.replace(/\\times/g, "×").replace(/\\cdot/g, "·")
+		.replace(/\\pm/g, "±").replace(/\\approx/g, "≈")
+		.replace(/\\%/g, "%")
+		.replace(/\\[,;!]/g, "").replace(/\\ /g, " ");
+	// Drop \left \right and formatting command names (keep their braces).
+	s = s.replace(/\\left|\\right/g, "");
+	s = s.replace(
+		/\\(?:mathrm|mathbf|mathit|mathsf|mathbb|mathtt|text|operatorname)\s*/g,
+		""
+	);
+	// Digit sub/superscripts -> Unicode (e.g. `_{2}` -> ₂, `^{3}` -> ³).
+	s = s.replace(/_\s*\{?\s*([0-9]+)\s*\}?/g, (_m, d: string) =>
+		d.split("").map((c) => SUB_DIGITS[c] ?? c).join("")
+	);
+	s = s.replace(/\^\s*\{?\s*([0-9]+)\s*\}?/g, (_m, d: string) =>
+		d.split("").map((c) => SUP_DIGITS[c] ?? c).join("")
+	);
+	// Remove remaining braces and tidy whitespace.
+	s = s.replace(/[{}]/g, "");
+	s = s.replace(/\s+/g, " ").replace(/([≤≥<>=])\s+/g, "$1");
+	s = s.replace(/\(\s+/g, "(").replace(/\s+\)/g, ")");
+	return s.trim();
 }
 
 /**
