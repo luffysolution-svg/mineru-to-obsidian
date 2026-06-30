@@ -8,6 +8,7 @@
 ## 功能 / Features
 
 - 在文件浏览器中右键文档，选择 **解析文档 / Parse document**。
+- **批量解析 / Batch**：在文件浏览器中多选文档后右键，选择 **批量解析 N 个文档 / Parse N documents**。会按各后端的速率 / 并发限制自动控制并行度，并显示进度与成功 / 失败汇总。
 - 七个解析后端：
   - **MinerU**（云端）— 免费模式（无需 Token）或 Precision API（带 Token，支持提取图片附件）。
   - **markitdown**（本地）— 调用本地 Python CLI，仅桌面端，不提取图片。

@@ -129,11 +129,35 @@ async function pollStatus(
  * Doc2X returns LaTeX math with `\( ... \)` (inline) and `\[ ... \]` (block)
  * delimiters, which Obsidian does not render. Rewrite them to Obsidian's
  * `$ ... $` and `$$ ... $$` so formulas display correctly.
+ *
+ * Critical detail: Obsidian will NOT render inline math whose opening `$` is
+ * immediately followed by whitespace (e.g. `$ x $`). It silently falls back to
+ * plain markdown, where `_` subscripts get consumed as italic markers — which
+ * is exactly the "missing subscript / orange italic" breakage users see. So we
+ * trim the inner body before wrapping it in single dollars.
  */
 function normalizeFormulas(md: string): string {
-	return md
-		.replace(/\\\[([\s\S]*?)\\\]/g, (_m, body) => `$$${body}$$`)
-		.replace(/\\\(([\s\S]*?)\\\)/g, (_m, body) => `$${body}$`);
+	let out = md;
+	// Doc2X seeds the markdown with `<!-- Meanless: N -->` noise markers for
+	// decorative regions; strip them so they don't litter the note.
+	out = out.replace(/<!--\s*Meanless:[^>]*-->/gi, "");
+	// Fenced LaTeX/math code blocks -> display math (otherwise they render as a
+	// raw, horizontally-scrolling code block instead of a formula).
+	out = out.replace(
+		/```(?:latex|math)[ \t]*\r?\n([\s\S]*?)```/gi,
+		(_m, body) => `$$\n${String(body).trim()}\n$$`
+	);
+	// \[ ... \] -> $$ ... $$ (display math)
+	out = out.replace(
+		/\\\[([\s\S]*?)\\\]/g,
+		(_m, body) => `$$${String(body).trim()}$$`
+	);
+	// \( ... \) -> $...$ (inline math); body MUST be trimmed (see note above).
+	out = out.replace(
+		/\\\(([\s\S]*?)\\\)/g,
+		(_m, body) => `$${String(body).trim()}$`
+	);
+	return out;
 }
 
 /**

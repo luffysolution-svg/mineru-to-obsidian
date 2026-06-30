@@ -1,4 +1,4 @@
-import { Notice, Plugin, TFile } from "obsidian";
+import { Notice, Plugin, TAbstractFile, TFile } from "obsidian";
 import {
 	DEFAULT_SETTINGS,
 	MinerUSettingTab,
@@ -13,6 +13,7 @@ import { DoclingParser } from "./parsers/docling";
 import { TextinParser } from "./parsers/textin";
 import { Doc2xParser } from "./parsers/doc2x";
 import { notifyError, notifySuccess, saveParseResult } from "./core/saver";
+import { parseBatch } from "./core/batch";
 import { runDiagnostics } from "./commands/diagnostics";
 import { SetupGuideModal } from "./commands/setupGuide";
 import { ApiConfigModal } from "./ui/apiConfigModal";
@@ -48,6 +49,22 @@ export default class MinerUPlugin extends Plugin {
 							.onClick(() => this.parseAndSave(file))
 					);
 				}
+			})
+		);
+
+		// Right-click on a multi-selection in the explorer -> batch parse.
+		this.registerEvent(
+			this.app.workspace.on("files-menu", (menu, files) => {
+				const supported = this.collectSupported(files);
+				if (supported.length === 0) return;
+				menu.addItem((item) =>
+					item
+						.setTitle(
+							`批量解析 ${supported.length} 个文档 / Parse ${supported.length} documents`
+						)
+						.setIcon("file-scan")
+						.onClick(() => this.parseBatchAndSave(supported))
+				);
 			})
 		);
 
@@ -113,6 +130,19 @@ export default class MinerUPlugin extends Plugin {
 
 	private isSupported(file: TFile): boolean {
 		return SUPPORTED_EXTENSIONS.includes(file.extension.toLowerCase());
+	}
+
+	/** Filter a mixed selection down to supported files. */
+	private collectSupported(files: TAbstractFile[]): TFile[] {
+		return files.filter(
+			(f): f is TFile => f instanceof TFile && this.isSupported(f)
+		);
+	}
+
+	/** Parse and save many files with backend-aware concurrency. */
+	async parseBatchAndSave(files: TFile[]): Promise<void> {
+		const parser = this.parsers[this.settings.parser];
+		await parseBatch(this.app, parser, files, this.settings);
 	}
 
 	/** Parse a file with the selected backend and save the result. */
