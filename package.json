@@ -1,6 +1,6 @@
 {
   "name": "mineru-to-obsidian",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Parse documents into Markdown with MinerU or markitdown, inside Obsidian.",
   "main": "main.js",
   "author": "luffysolution-svg",
