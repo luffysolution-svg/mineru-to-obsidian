@@ -1,4 +1,4 @@
-import { App, Modal, Setting, Notice } from "obsidian";
+import { Modal, Setting, Notice } from "obsidian";
 import type MinerUPlugin from "../main";
 import { MINERU_TOKEN_URL } from "../settings";
 
@@ -26,7 +26,7 @@ export class ApiConfigModal extends Modal {
 			.setName("API Token")
 			.addText((text) => {
 				text.inputEl.type = "password";
-				text.inputEl.style.width = "260px";
+				text.inputEl.classList.add("mineru-token-input");
 				text
 					.setPlaceholder("Bearer token ...")
 					.setValue(this.value)

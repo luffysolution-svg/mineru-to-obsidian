@@ -56,7 +56,7 @@ export class TextinParser implements Parser {
 			headers: headers(settings),
 			body: bytes,
 		});
-		const json = res.json ?? {};
+		const json = (res.json ?? {}) as Record<string, unknown>;
 		checkCode(json);
 		const markdown = (json.result as { markdown?: string } | undefined)?.markdown;
 		if (typeof markdown !== "string" || !markdown.trim()) {
@@ -95,7 +95,7 @@ export async function testTextin(
 			headers: headers(settings),
 			body: bytes,
 		});
-		const json = res.json ?? {};
+		const json = (res.json ?? {}) as Record<string, unknown>;
 		checkCode(json);
 		const md =
 			(json.result as { markdown?: string } | undefined)?.markdown ?? "";
@@ -115,7 +115,7 @@ export async function testTextin(
 
 /** Draw the given text onto a small canvas and return PNG bytes. */
 function makeTestImage(text: string): ArrayBuffer {
-	const canvas = document.createElement("canvas");
+	const canvas = activeDocument.createElement("canvas");
 	canvas.width = 240;
 	canvas.height = 90;
 	const ctx = canvas.getContext("2d");

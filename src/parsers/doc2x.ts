@@ -33,7 +33,7 @@ interface StatusData {
 
 /** Sleep helper. */
 function sleep(ms: number): Promise<void> {
-	return new Promise((r) => setTimeout(r, ms));
+	return new Promise((r) => window.setTimeout(r, ms));
 }
 
 /** Authorization header from the configured key. */
@@ -72,7 +72,9 @@ export class Doc2xParser implements Parser {
 			throw: false,
 			headers,
 		});
-		const pre = unwrap<PreuploadData>(preRes.json ?? {});
+		const pre = unwrap<PreuploadData>(
+			(preRes.json ?? {}) as Record<string, unknown>
+		);
 
 		// 2. PUT the raw file bytes to the signed URL.
 		const put = await requestUrl({
@@ -107,7 +109,9 @@ async function pollStatus(
 			throw: false,
 			headers,
 		});
-		const data = unwrap<StatusData>(res.json ?? {});
+		const data = unwrap<StatusData>(
+			(res.json ?? {}) as Record<string, unknown>
+		);
 		if (data.status === "success") {
 			const pages = data.result?.pages ?? [];
 			const md = pages
@@ -250,7 +254,9 @@ export async function testDoc2x(
 			throw: false,
 			headers,
 		});
-		const pre = unwrap<PreuploadData>(preRes.json ?? {});
+		const pre = unwrap<PreuploadData>(
+			(preRes.json ?? {}) as Record<string, unknown>
+		);
 		const put = await requestUrl({
 			url: pre.url,
 			method: "PUT",

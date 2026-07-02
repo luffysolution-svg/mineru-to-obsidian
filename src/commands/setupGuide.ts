@@ -42,7 +42,11 @@ export class SetupGuideModal extends Modal {
 				})
 			);
 
-		this.detailed ? this.renderDetailed(contentEl) : this.renderConcise(contentEl);
+		if (this.detailed) {
+			this.renderDetailed(contentEl);
+		} else {
+			this.renderConcise(contentEl);
+		}
 
 		// Official links.
 		contentEl.createEl("h3", { text: "官方链接 / Official links" });

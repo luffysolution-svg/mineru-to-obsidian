@@ -134,7 +134,7 @@ async function probeMinerUToken(token: string): Promise<boolean> {
 			},
 			body: JSON.stringify({ files: [{ name: "__probe__.pdf" }] }),
 		});
-		const code = res.json?.code;
+		const code = (res.json as { code?: string } | undefined)?.code;
 		// Auth errors are A0202 / A0211. A 0 (or any non-auth code) means the token was accepted.
 		return code !== "A0202" && code !== "A0211" && res.status !== 401;
 	} catch {

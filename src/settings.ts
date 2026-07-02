@@ -391,7 +391,7 @@ export class MinerUSettingTab extends PluginSettingTab {
 		run: () => Promise<{ ok: boolean; detail: string }>
 	): void {
 		const resultEl = createEl("div", {
-			cls: "setting-item-description",
+			cls: ["setting-item-description", "mineru-test-result"],
 			text: "",
 		});
 		new Setting(containerEl)
@@ -407,9 +407,8 @@ export class MinerUSettingTab extends PluginSettingTab {
 						resultEl.setText("");
 						const r = await run();
 						resultEl.setText((r.ok ? "✓ " : "✗ ") + r.detail);
-						resultEl.style.color = r.ok
-							? "var(--text-success)"
-							: "var(--text-error)";
+						resultEl.classList.toggle("is-success", r.ok);
+						resultEl.classList.toggle("is-error", !r.ok);
 						btn.setDisabled(false);
 						btn.setButtonText("测试 / Test");
 					})
@@ -522,7 +521,7 @@ export class MinerUSettingTab extends PluginSettingTab {
 			.setDesc("发送给模型的指令，决定输出风格。")
 			.addTextArea((ta) => {
 				ta.inputEl.rows = 3;
-				ta.inputEl.style.width = "100%";
+				ta.inputEl.classList.add("mineru-prompt-input");
 				ta
 					.setValue(this.plugin.settings.visionPrompt)
 					.onChange(async (v) => {
@@ -533,7 +532,7 @@ export class MinerUSettingTab extends PluginSettingTab {
 
 		// Test button + result line.
 		const resultEl = createEl("div", {
-			cls: "setting-item-description",
+			cls: ["setting-item-description", "mineru-test-result"],
 			text: "",
 		});
 		new Setting(containerEl)
@@ -549,9 +548,8 @@ export class MinerUSettingTab extends PluginSettingTab {
 						resultEl.setText("");
 						const r = await testVision(this.plugin.settings);
 						resultEl.setText((r.ok ? "✓ " : "✗ ") + r.detail);
-						resultEl.style.color = r.ok
-							? "var(--text-success)"
-							: "var(--text-error)";
+						resultEl.classList.toggle("is-success", r.ok);
+						resultEl.classList.toggle("is-error", !r.ok);
 						btn.setDisabled(false);
 						btn.setButtonText("测试 / Test");
 					})
@@ -617,7 +615,7 @@ export class MinerUSettingTab extends PluginSettingTab {
 
 		// Test button + result line.
 		const resultEl = createEl("div", {
-			cls: "setting-item-description",
+			cls: ["setting-item-description", "mineru-test-result"],
 			text: "",
 		});
 		new Setting(containerEl)
@@ -633,9 +631,8 @@ export class MinerUSettingTab extends PluginSettingTab {
 						resultEl.setText("");
 						const r = await testBaidu(this.plugin.settings);
 						resultEl.setText((r.ok ? "✓ " : "✗ ") + r.detail);
-						resultEl.style.color = r.ok
-							? "var(--text-success)"
-							: "var(--text-error)";
+						resultEl.classList.toggle("is-success", r.ok);
+						resultEl.classList.toggle("is-error", !r.ok);
 						btn.setDisabled(false);
 						btn.setButtonText("测试 / Test");
 					})

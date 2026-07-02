@@ -1,10 +1,10 @@
 {
   "id": "mineru-parser",
   "name": "MinerU Parser",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "minAppVersion": "1.4.0",
-  "description": "Right-click a document to parse it into Markdown with MinerU or markitdown, saving the note and image attachments to custom folders. 右键解析文档为 Markdown，正文与图片附件分别保存到自定义位置。",
+  "description": "Right-click a document to parse it into Markdown with MinerU or markitdown, saving the note and image attachments to custom folders.",
   "author": "luffysolution-svg",
-  "authorUrl": "https://github.com/luffysolution-svg/mineru-to-obsidian",
+  "authorUrl": "https://github.com/luffysolution-svg",
   "isDesktopOnly": true
 }

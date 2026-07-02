@@ -1,0 +1,19 @@
+/* MinerU Parser plugin styles.
+   Kept in CSS classes (rather than inline element.style) so the plugin passes
+   Obsidian's no-static-styles-assignment lint rule and respects user themes. */
+
+.mineru-token-input {
+	width: 260px;
+}
+
+.mineru-prompt-input {
+	width: 100%;
+}
+
+.mineru-test-result.is-success {
+	color: var(--text-success);
+}
+
+.mineru-test-result.is-error {
+	color: var(--text-error);
+}

@@ -76,10 +76,11 @@ export async function fetchModels(
 		headers: { Authorization: `Bearer ${key}` },
 	});
 	if (res.status < 200 || res.status >= 300) {
-		const detail = res.json?.error?.message || `HTTP ${res.status}`;
+		const json = res.json as { error?: { message?: string } } | undefined;
+		const detail = json?.error?.message || `HTTP ${res.status}`;
 		throw new Error(`获取模型列表失败 / fetch models failed: ${detail}`);
 	}
-	const data = res.json?.data;
+	const data = (res.json as { data?: unknown } | undefined)?.data;
 	if (!Array.isArray(data)) {
 		throw new Error("响应中无 data 数组 / no model list in response");
 	}
@@ -129,14 +130,19 @@ export async function visionChatCompletion(
 	});
 
 	if (res.status < 200 || res.status >= 300) {
+		const json = res.json as { error?: { message?: string } } | undefined;
 		const detail =
-			res.json?.error?.message ||
+			json?.error?.message ||
 			(res.text ? res.text.slice(0, 200) : "") ||
 			`HTTP ${res.status}`;
 		throw new Error(`请求失败 / request failed (HTTP ${res.status}): ${detail}`);
 	}
 
-	const content = res.json?.choices?.[0]?.message?.content;
+	const content = (
+		res.json as
+			| { choices?: Array<{ message?: { content?: string } }> }
+			| undefined
+	)?.choices?.[0]?.message?.content;
 	if (typeof content !== "string") {
 		throw new Error(
 			"响应格式异常：未找到 choices[0].message.content / unexpected response shape"
@@ -190,7 +196,7 @@ export async function testVision(
 
 /** Draw the given text onto a small canvas and return a PNG data URI. */
 function makeTestImage(text: string): string {
-	const canvas = document.createElement("canvas");
+	const canvas = activeDocument.createElement("canvas");
 	canvas.width = 240;
 	canvas.height = 90;
 	const ctx = canvas.getContext("2d");

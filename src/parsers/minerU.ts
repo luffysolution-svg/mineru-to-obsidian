@@ -16,11 +16,12 @@ interface Envelope<T> {
 
 /** Sleep helper. */
 function sleep(ms: number): Promise<void> {
-	return new Promise((r) => setTimeout(r, ms));
+	return new Promise((r) => window.setTimeout(r, ms));
 }
 
 /** Throw if the MinerU envelope reports an error. */
-function unwrap<T>(env: Envelope<T>): T {
+function unwrap<T>(json: unknown): T {
+	const env = json as Envelope<T>;
 	if (env.code !== 0) {
 		throw new Error(`MinerU ${env.code}: ${env.msg || "unknown error"}`);
 	}
@@ -241,7 +242,7 @@ export class MinerUParser implements Parser {
 				data: content.buffer.slice(
 					content.byteOffset,
 					content.byteOffset + content.byteLength
-				) as ArrayBuffer,
+				),
 			});
 		}
 

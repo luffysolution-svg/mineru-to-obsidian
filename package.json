@@ -1,6 +1,6 @@
 {
   "name": "mineru-to-obsidian",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "Parse documents into Markdown with MinerU or markitdown, inside Obsidian.",
   "main": "main.js",
   "author": "luffysolution-svg",
@@ -16,7 +16,6 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^16.11.6",
-    "builtin-modules": "3.3.0",
     "esbuild": "0.25.5",
     "obsidian": "latest",
     "tslib": "2.4.0",

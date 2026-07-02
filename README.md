@@ -1,7 +1,41 @@
-# MinerU to Obsidian
+# MinerU Parser
 
-> 右键解析文档为 Markdown，正文与图片附件分别保存到自定义位置。
 > Right-click any document to parse it into Markdown with **MinerU** or **markitdown**, saving the note and image attachments to custom folders.
+> 右键解析文档为 Markdown，正文与图片附件分别保存到自定义位置。
+
+---
+
+## Overview (English)
+
+MinerU Parser adds a right-click **"Parse document"** action to Obsidian's file
+explorer. It converts PDFs, Office files, and images into clean Markdown and
+saves the note plus any extracted image attachments to folders you configure.
+
+It supports seven parsing backends so you can pick the right trade-off between
+quality, cost, and privacy:
+
+- **MinerU** (cloud) — free mode (no token) or the Precision API (with a token,
+  extracts image attachments).
+- **markitdown** (local) — runs the local Python CLI; desktop only; no images.
+- **docling** (local) — runs the local Python CLI; desktop only; Markdown only.
+- **Vision LLM OCR** — recognizes text in **images** through any OpenAI-compatible
+  vision model (works with relays such as new-api / one-api).
+- **Baidu OCR** (document parsing) — Baidu Cloud document parsing for **PDF /
+  image / Office**, returning Markdown with tables, formulas, and layout.
+- **TextIn** (document parsing) — TextIn xParse for **PDF / image / Office**.
+- **Doc2X** (document parsing) — Doc2X, strong on **PDF** formulas / tables / layout.
+
+Other features: batch parsing of a multi-file selection with backend-aware
+concurrency, customizable save paths with `{filename}` / `{date}` / `{noteName}`
+variables, attachment renaming, and success / failure notices.
+
+This plugin is **desktop-only** (`isDesktopOnly: true`) because the local CLI
+backends spawn processes and result extraction relies on a bundled unzip library.
+
+Supported file types: `pdf, doc, docx, ppt, pptx, xls, xlsx, png, jpg, jpeg,
+jp2, webp, gif, bmp, html`.
+
+The rest of this document is written in Chinese. 以下为中文说明。
 
 ---
 

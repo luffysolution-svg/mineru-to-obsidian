@@ -22,7 +22,7 @@ const POLL_TIMEOUT_MS = 5 * 60 * 1000;
 
 /** Sleep helper. */
 function sleep(ms: number): Promise<void> {
-	return new Promise((r) => setTimeout(r, ms));
+	return new Promise((r) => window.setTimeout(r, ms));
 }
 
 /** Exchange API Key + Secret Key for an access_token. */
@@ -40,10 +40,13 @@ async function getAccessToken(
 		`&client_id=${encodeURIComponent(ak)}` +
 		`&client_secret=${encodeURIComponent(sk)}`;
 	const res = await requestUrl({ url, method: "POST", throw: false });
-	const token = res.json?.access_token;
+	const json = res.json as
+		| { access_token?: string; error_description?: string; error?: string }
+		| undefined;
+	const token = json?.access_token;
 	if (typeof token !== "string" || !token) {
 		const detail =
-			res.json?.error_description || res.json?.error || `HTTP ${res.status}`;
+			json?.error_description || json?.error || `HTTP ${res.status}`;
 		throw new Error(`获取百度 access_token 失败 / token failed: ${detail}`);
 	}
 	return token;
@@ -62,7 +65,7 @@ async function postForm(
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		body,
 	});
-	return res.json ?? {};
+	return (res.json ?? {}) as Record<string, unknown>;
 }
 
 /** Throw if the Baidu response carries a non-zero error_code. */
@@ -207,7 +210,7 @@ export async function testBaidu(
 
 /** Draw the given text onto a small canvas and return a PNG data URI. */
 function makeTestImage(text: string): string {
-	const canvas = document.createElement("canvas");
+	const canvas = activeDocument.createElement("canvas");
 	canvas.width = 240;
 	canvas.height = 90;
 	const ctx = canvas.getContext("2d");
